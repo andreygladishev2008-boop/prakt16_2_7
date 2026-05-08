@@ -1,49 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using StudentApp.Models;    
+using System.Linq;
 
-namespace pr16_2_7
+using pr16_2_7.Models;
+
+namespace pr16_2_7.Services 
 {
-    public class CsvService
+    public static class CsvService
     {
-        private const string Header = "Студент,Предмет,Оценка";
-
-        // Сохранить всех студентов в CSV
-        public static void Save(string filePath, Dictionary<string, Student> students)
+        public static void Save(string filename, Dictionary<string, Student> students)
         {
-            using var writer = new StreamWriter(filePath, false, Encoding.UTF8);
-            writer.WriteLine(Header);
+            var lines = new List<string>();
+            lines.Add("StudentName,Subject,Grade");
 
-            foreach (var student in students)
+            foreach (var student in students.Values)
             {
-                foreach (var subject in student.Value.Subjects)
+                foreach (var subject in student.Subjects)
                 {
-                    writer.WriteLine($"{student.Key},{subject.Subject},{subject.Grade}");
+                    lines.Add($"{EscapeCsv(student.Name)},{EscapeCsv(subject.Subject)},{subject.Grade}");
                 }
             }
+
+            File.WriteAllLines(filename, lines);
         }
 
-        // Загрузить студентов из CSV
-        public static Dictionary<string, Student> Load(string filePath)
+        public static Dictionary<string, Student> Load(string filename)
         {
-            var lines = File.ReadAllLines(filePath, Encoding.UTF8);
-            if (lines.Length < 2)
-                throw new Exception("Файл пуст");
-
             var students = new Dictionary<string, Student>();
+            var lines = File.ReadAllLines(filename);
 
             for (int i = 1; i < lines.Length; i++)
             {
-                var parts = lines[i].Split(',');
+                var parts = ParseCsvLine(lines[i]);
                 if (parts.Length >= 3)
                 {
-                    string name = parts[0].Trim();
-                    string subject = parts[1].Trim();
-
+                    string name = UnescapeCsv(parts[0]);
+                    string subject = UnescapeCsv(parts[1]);
                     if (int.TryParse(parts[2], out int grade))
                     {
                         if (!students.ContainsKey(name))
@@ -59,6 +52,41 @@ namespace pr16_2_7
             }
 
             return students;
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (value.Contains(",") || value.Contains("\""))
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return value;
+        }
+
+        private static string UnescapeCsv(string value)
+        {
+            if (value.StartsWith("\"") && value.EndsWith("\""))
+                return value.Substring(1, value.Length - 2).Replace("\"\"", "\"");
+            return value;
+        }
+
+        private static string[] ParseCsvLine(string line)
+        {
+            var result = new List<string>();
+            bool inQuotes = false;
+            int start = 0;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                if (line[i] == '"')
+                    inQuotes = !inQuotes;
+                else if (line[i] == ',' && !inQuotes)
+                {
+                    result.Add(line.Substring(start, i - start));
+                    start = i + 1;
+                }
+            }
+            result.Add(line.Substring(start));
+
+            return result.ToArray();
         }
     }
 }

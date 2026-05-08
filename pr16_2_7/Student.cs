@@ -1,36 +1,74 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
-namespace pr16_2_7
+namespace pr16_2_7.Models 
 {
-    public class Student
+    public class Student : INotifyPropertyChanged
     {
-        public string Name { get; set; }
-        public List<SubjectGrade> Subjects { get; set; } = new();
+        private string _name;
+        private List<SubjectGrade> _subjects = new();
 
-        // Средняя оценка
-        public double AverageGrade => Subjects.Count > 0
-            ? Subjects.Average(s => s.Grade)
-            : 0;
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                _name = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AverageGrade));
+                OnPropertyChanged(nameof(AverageColor));
+                OnPropertyChanged(nameof(GoodPercent));
+                OnPropertyChanged(nameof(IsAdmitted));
+            }
+        }
 
-        // Процент хороших оценок (4 и 5)
-        public double GoodPercent => Subjects.Count > 0
-            ? (double)Subjects.Count(s => s.Grade >= 4) / Subjects.Count * 100
-            : 0;
+        public List<SubjectGrade> Subjects
+        {
+            get => _subjects;
+            set
+            {
+                _subjects = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AverageGrade));
+                OnPropertyChanged(nameof(AverageColor));
+                OnPropertyChanged(nameof(GoodPercent));
+                OnPropertyChanged(nameof(IsAdmitted));
+            }
+        }
 
-        // Допущен к сессии (>=60% хороших оценок)
+        public double AverageGrade => Subjects.Count > 0 ? Subjects.Average(s => s.Grade) : 0;
+
+        public string AverageColor
+        {
+            get
+            {
+                if (AverageGrade > 4) return "Green";
+                if (AverageGrade >= 3) return "Gold";
+                return "Red";
+            }
+        }
+
+        public double GoodPercent
+        {
+            get
+            {
+                if (Subjects.Count == 0) return 0;
+                int goodGrades = Subjects.Count(s => s.Grade >= 3);
+                return (double)goodGrades / Subjects.Count * 100;
+            }
+        }
+
         public bool IsAdmitted => GoodPercent >= 60;
 
-        // Цвет средней оценки (для индикатора)
-        public string AverageColor => AverageGrade switch
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
         {
-            > 4 => "Green",
-            >= 3 => "Gold",
-            _ => "Red"
-        };
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
     }
 
     public class SubjectGrade

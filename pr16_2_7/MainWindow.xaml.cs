@@ -4,14 +4,11 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
-using StudentApp.Models;
-using StudentApp.Services;
+using pr16_2_7.Models;
+using pr16_2_7.Services;
 
 namespace pr16_2_7
 {
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private Dictionary<string, Student> students = new();
@@ -22,7 +19,6 @@ namespace pr16_2_7
             InitializeComponent();
         }
 
-        // Добавление оценки
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             string name = txtName.Text.Trim();
@@ -30,13 +26,15 @@ namespace pr16_2_7
 
             if (!int.TryParse(txtGrade.Text, out int grade) || grade < 1 || grade > 5)
             {
-                MessageBox.Show("Оценка должна быть от 1 до 5!");
+                MessageBox.Show("Оценка должна быть от 1 до 5!", "Ошибка ввода",
+                              MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(subject))
             {
-                MessageBox.Show("Введите имя студента и предмет!");
+                MessageBox.Show("Введите имя студента и предмет!", "Ошибка ввода",
+                              MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -47,72 +45,95 @@ namespace pr16_2_7
 
             UpdateStudentList();
             ClearInputs();
+
+            // Уведомление
+            MessageBox.Show($"Оценка {grade} по предмету '{subject}' добавлена студенту {name}!",
+                          "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        // Выбор студента
         private void CmbStudents_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (cmbStudents.SelectedItem != null)
             {
                 string selectedName = cmbStudents.SelectedItem.ToString();
-                currentStudent = students[selectedName];
-                UpdateStudentInfo();
+                if (students.ContainsKey(selectedName))
+                {
+                    currentStudent = students[selectedName];
+                    UpdateStudentInfo();
+                }
             }
         }
 
-        // Сохранение в CSV
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             if (students.Count == 0)
             {
-                MessageBox.Show("Нет данных!");
+                MessageBox.Show("Нет данных для сохранения!", "Предупреждение",
+                              MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var dialog = new SaveFileDialog { Filter = "CSV|*.csv", DefaultExt = ".csv" };
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV файлы (*.csv)|*.csv|Все файлы (*.*)|*.*",
+                DefaultExt = ".csv",
+                Title = "Сохранить данные студентов"
+            };
+
             if (dialog.ShowDialog() == true)
             {
                 try
                 {
                     CsvService.Save(dialog.FileName, students);
-                    MessageBox.Show("Сохранено!");
+                    MessageBox.Show($"Данные успешно сохранены в файл:\n{dialog.FileName}",
+                                  "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка: " + ex.Message);
+                    MessageBox.Show($"Ошибка при сохранении:\n{ex.Message}", "Ошибка",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        // Загрузка из CSV
         private void BtnLoad_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog { Filter = "CSV|*.csv" };
+            var dialog = new OpenFileDialog
+            {
+                Filter = "CSV файлы (*.csv)|*.csv|Все файлы (*.*)|*.*",
+                Title = "Загрузить данные студентов"
+            };
+
             if (dialog.ShowDialog() == true)
             {
                 try
                 {
                     students = CsvService.Load(dialog.FileName);
                     UpdateStudentList();
-                    MessageBox.Show($"Загружено {students.Count} студентов!");
+                    MessageBox.Show($"Загружено {students.Count} студентов(а) из файла:\n{dialog.FileName}",
+                                  "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка: " + ex.Message);
+                    MessageBox.Show($"Ошибка при загрузке:\n{ex.Message}", "Ошибка",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        // Вспомогательные методы
+        private void BtnClear_Click(object sender, RoutedEventArgs e)
+        {
+            ClearInputs();
+        }
+
         private void UpdateStudentList()
         {
-            cmbStudents.ItemsSource = null;
-            cmbStudents.ItemsSource = students.Keys.ToList();
+            var studentNames = students.Keys.ToList();
+            cmbStudents.ItemsSource = studentNames;
 
-            if (students.Any())
+            if (studentNames.Any())
             {
-                currentStudent = students.Values.First();
-                UpdateStudentInfo();
+                cmbStudents.SelectedIndex = 0;
             }
             else
             {
@@ -127,28 +148,43 @@ namespace pr16_2_7
             // Средняя оценка
             tbAverage.Text = currentStudent.AverageGrade.ToString("F2");
 
-            // Цветной индикатор
-            borderAverage.Background = currentStudent.AverageColor switch
+            SolidColorBrush colorBrush;
+            switch (currentStudent.AverageColor)
             {
-                "Green" => new SolidColorBrush(Colors.LightGreen),
-                "Gold" => new SolidColorBrush(Colors.Gold),
-                "Red" => new SolidColorBrush(Colors.LightCoral),
-                _ => borderAverage.Background
-            };
+                case "Green":
+                    colorBrush = new SolidColorBrush(Colors.LightGreen);
+                    break;
+                case "Gold":
+                    colorBrush = new SolidColorBrush(Colors.Gold);
+                    break;
+                case "Red":
+                    colorBrush = new SolidColorBrush(Colors.LightCoral);
+                    break;
+                default:
+                    colorBrush = new SolidColorBrush(Colors.LightGray);
+                    break;
+            }
+            borderAverage.Background = colorBrush;
 
             // Прогресс-бар
-            progressBar.Value = currentStudent.GoodPercent;
-            tbPercent.Text = $"{currentStudent.GoodPercent:F0}%";
+            double goodPercent = currentStudent.GoodPercent;
+            progressBar.Value = goodPercent;
+            tbPercent.Text = $"{goodPercent:F0}%";
 
             // Цвет прогресс-бара
-            progressBar.Foreground = currentStudent.GoodPercent >= 60
+            progressBar.Foreground = goodPercent >= 60
                 ? new SolidColorBrush(Colors.Green)
                 : new SolidColorBrush(Colors.Red);
 
             // Статус
-            tbStatus.Text = currentStudent.IsAdmitted
-                ? "ДОПУЩЕН К СЕССИИ"
-                : "НЕ ДОПУЩЕН К СЕССИИ";
+            bool isAdmitted = currentStudent.IsAdmitted;
+            tbStatus.Text = isAdmitted ? "✅ ДОПУЩЕН К СЕССИИ" : "❌ НЕ ДОПУЩЕН К СЕССИИ";
+
+            // Меняем цвет фона статуса
+            var statusBorderBrush = isAdmitted
+                ? new SolidColorBrush(Colors.LightGreen)
+                : new SolidColorBrush(Colors.LightCoral);
+            statusBorder.Background = statusBorderBrush;
         }
 
         private void ClearDisplay()
@@ -157,7 +193,8 @@ namespace pr16_2_7
             borderAverage.Background = new SolidColorBrush(Colors.LightGray);
             progressBar.Value = 0;
             tbPercent.Text = "0%";
-            tbStatus.Text = " НЕТ СТУДЕНТОВ";
+            tbStatus.Text = "❌ НЕТ СТУДЕНТОВ";
+            statusBorder.Background = new SolidColorBrush(Colors.LightGray);
         }
 
         private void ClearInputs()
@@ -165,11 +202,8 @@ namespace pr16_2_7
             txtName.Text = "";
             txtSubject.Text = "";
             txtGrade.Text = "";
-        }
 
-        private void BtnClear_Click(object sender, RoutedEventArgs e)
-        {
-            ClearInputs();
+            txtName.Focus();
         }
     }
 }
