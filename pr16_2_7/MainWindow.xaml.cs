@@ -11,7 +11,7 @@ namespace pr16_2_7
 {
     public partial class MainWindow : Window
     {
-        private Dictionary<string, Student> students = new();
+        private Dictionary<string, Student> students = new Dictionary<string, Student>();
         private Student currentStudent;
 
         public MainWindow()
@@ -178,7 +178,7 @@ namespace pr16_2_7
 
             // Статус
             bool isAdmitted = currentStudent.IsAdmitted;
-            tbStatus.Text = isAdmitted ? "✅ ДОПУЩЕН К СЕССИИ" : "❌ НЕ ДОПУЩЕН К СЕССИИ";
+            tbStatus.Text = isAdmitted ? "ДОПУЩЕН К СЕССИИ" : "НЕ ДОПУЩЕН К СЕССИИ";
 
             // Меняем цвет фона статуса
             var statusBorderBrush = isAdmitted
@@ -193,7 +193,7 @@ namespace pr16_2_7
             borderAverage.Background = new SolidColorBrush(Colors.LightGray);
             progressBar.Value = 0;
             tbPercent.Text = "0%";
-            tbStatus.Text = "❌ НЕТ СТУДЕНТОВ";
+            tbStatus.Text = "НЕТ СТУДЕНТОВ";
             statusBorder.Background = new SolidColorBrush(Colors.LightGray);
         }
 

@@ -9,7 +9,7 @@ namespace pr16_2_7.Models
     public class Student : INotifyPropertyChanged
     {
         private string _name;
-        private List<SubjectGrade> _subjects = new();
+        private List<SubjectGrade> _subjects = new List<SubjectGrade>();
 
         public string Name
         {
